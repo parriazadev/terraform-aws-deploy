@@ -1,0 +1,3 @@
+clusters:
+  - id: "aws-dev"
+    type: "aws"

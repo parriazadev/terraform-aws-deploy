@@ -1,0 +1,47 @@
+version: 2.0
+type: deploy
+metadata:
+  name: deploy
+  namespace: terraform-aws
+
+tools:
+  name: make
+
+agent:
+  size: x1
+  packages:
+    - terraform
+    - terragrunt
+
+stages:
+    - type: linter
+      enabled: true
+      commands:
+        - echo lint
+
+    - type: deploy_plan
+      enabled: true
+      deployId: develop
+      configmap:
+        develop:
+            clusters:
+                - id: "aws-dev"
+                  type: "aws"
+      commands:
+        - terragrunt plan --terragrunt-source-update
+
+    - type: deploy
+        enabled: true
+        run Confirmation:
+            message: "Are you sure you want to apply the changes?"
+            confirmText: "Yes"
+            cancelText: "No"
+        deployId: develop
+        configmap:
+            develop:
+                clusters:
+                    - id: "aws-dev"
+                    type: "aws"
+        commands:
+            - terragrunt destroy --auto-approve --terragrunt-non-interactive
+            - terragrunt apply --auto-approve --terragrunt-source-update 
