@@ -1,31 +1,47 @@
-pipeline {
-    agent any
+version: 2.0
+type: deploy
+metadata:
+  name: deploy
+  namespace: terraform-aws
 
-    stages {
-        stage('Terraform Init') {
-            steps {
-                sh 'terraform init'
-            }
-        }
-        stage('Terraform Validate') {
-            steps {
-                sh 'terraform validate'
-            }
-        }
-        stage('Terraform Plan') {
-            steps {
-                sh 'terraform plan'
-            }
-        }
-        stage('Terraform Apply') {
-            steps {
-                sh 'terraform apply -auto-approve'
-            }
-        }
-        stage('Terraform Destroy') {
-            steps {
-                sh 'terraform destroy -auto-approve'
-            }
-        }
-    }
-}
+tools:
+  name: make
+
+agent:
+  size: x1
+  packages:
+    - terraform
+    - terragrunt
+
+stages:
+    - type: linter
+      enabled: true
+      commands:
+        - echo lint
+
+    - type: deploy_plan
+      enabled: true
+      deployId: develop
+      configmap:
+        develop:
+            clusters:
+                - id: "aws-dev"
+                  type: "aws"
+      commands:
+        - terragrunt plan --terragrunt-source-update
+
+    - type: deploy
+        enabled: true
+        run Confirmation:
+            message: "Are you sure you want to apply the changes?"
+            confirmText: "Yes"
+            cancelText: "No"
+        deployId: develop
+        configmap:
+            develop:
+                clusters:
+                    - id: "aws-dev"
+                    type: "aws"
+        commands:
+            - terragrunt destroy --auto-approve --terragrunt-non-interactive
+            - terragrunt apply --auto-approve --terragrunt-source-update 
